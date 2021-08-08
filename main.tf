@@ -178,9 +178,43 @@ module "wordpress-instance-sg" {
       source_security_group_id = module.wordpress-ingress-sg.security_group_id
     }
   ]
+  number_of_computed_ingress_with_source_security_group_id = 1
+  egress_rules = ["all-all"]
+  tags = local.tags_as_map
 }
 
+#######################################################################
+# AWS Application and Network Load Balancer (ALB & NLB) Terraform module
+#######################################################################
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 6.0"
 
+  name = local.name
+
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.public_subnets
+  security_groups = [module.wordpress-ingress-sg.security_group_id]
+
+  http_tcp_listeners = [
+    {
+      port               = 80
+      protocol           = "HTTP"
+      target_group_index = 0
+    }
+  ]
+
+  target_groups = [
+    {
+      name             = local.name
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+    },
+  ]
+
+  tags = local.tags_as_map
+}
 ################################################################################
 # basic ASG with Launch Template
 ################################################################################
@@ -208,6 +242,15 @@ module "asg" {
   image_id      = data.aws_ami.amazon-linux-2.id
   instance_type = "t2.micro"
   user_data = "${base64encode(data.template_file.user_data.rendered)}"
+
+  network_interfaces = [
+    {
+      delete_on_termination = true
+      description           = "eth0"
+      device_index          = 0
+      security_groups       = [module.wordpress-instance-sg.security_group_id]
+    }
+  ]
   tags        = local.tags
   tags_as_map = local.tags_as_map
 }
