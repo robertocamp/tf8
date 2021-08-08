@@ -7,6 +7,24 @@ locals {
   service_name = "forum"
   owner        = "Community Team"
   name         = "WORDPRESS"
+
+  tags = [
+    {
+      key                 = "Project"
+      value               = "https://github.com/robertocamp/tf8"
+      propagate_at_launch = true
+    },
+    {
+      key                 = "foo"
+      value               = ""
+      propagate_at_launch = true
+    },
+  ]
+
+  tags_as_map = {
+    Owner       = "user"
+    Environment = "dev"
+  }
 }
 
 
@@ -168,26 +186,28 @@ module "wordpress-instance-sg" {
 ################################################################################
 
 
-# module "asg" {
-#   source  = "terraform-aws-modules/autoscaling/aws"
-#   version = "~> 4.0"
+module "asg" {
+  source  = "terraform-aws-modules/autoscaling/aws"
+  version = "~> 4.0"
 
-#   # Autoscaling group
-#   name = local.name
+  # Autoscaling group
+  name = local.name
 
-#   vpc_zone_identifier = module.vpc.private_subnets
-#   min_size            = 1
-#   max_size            = 1
-#   desired_capacity    = 1
+  vpc_zone_identifier = module.vpc.private_subnets
+  min_size            = 1
+  max_size            = 1
+  desired_capacity    = 1
 
-#   # Launch template
-#   lt_name                = local.name
-#   description            = "wordpress instance with user data"
-#   update_default_version = true
+  # Launch template
+  lt_name                = local.name
+  description            = "wordpress instance with user data"
+  update_default_version = true
+  use_lt                 = true
+  create_lt              = true
 
-#   image_id      = data.aws_ami.amazon-linux-2.id
-#   instance_type = "t2.micro"
-#   user_data = "${base64encode(data.template_file.user_data.rendered)}"
-#   tags        = local.tags
-#   tags_as_map = local.tags_as_map
-# }
+  image_id      = data.aws_ami.amazon-linux-2.id
+  instance_type = "t2.micro"
+  user_data = "${base64encode(data.template_file.user_data.rendered)}"
+  tags        = local.tags
+  tags_as_map = local.tags_as_map
+}
