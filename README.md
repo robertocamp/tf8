@@ -15,6 +15,8 @@ This repo is a companion repo to the [Use Modules from the Registry learn tutori
 - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html
 - https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Scenario2.html#VPC_Scenario2_Security
 - https://registry.terraform.io/modules/terraform-aws-modules/alb/aws/latest
+- https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-update-security-groups.html
+
 
 # amazon linux 2:  https://www.hashicorp.com/blog/hashicorp-terraform-supports-amazon-linux-2
 # aws cli descirbe images: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html
