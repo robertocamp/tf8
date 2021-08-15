@@ -131,13 +131,16 @@ module "vpc" {
   name = local.name
   cidr = var.vpc_cidr
 
-  azs             = data.aws_availability_zones.available.names
-  private_subnets = var.vpc_private_subnets
-  public_subnets  = var.vpc_public_subnets
+  azs                       = data.aws_availability_zones.available.names
+  private_subnets           = var.vpc_private_subnets
+  public_subnets            = var.vpc_public_subnets
 
-  enable_nat_gateway = var.vpc_enable_nat_gateway
+  enable_nat_gateway        = var.vpc_enable_nat_gateway
+  single_nat_gateway        = false
+  reuse_nat_ips             = true
+  external_nat_ip_ids       = "${aws_eip.nat.*.id}"
 
-  tags = var.vpc_tags
+  tags                      = var.vpc_tags
 }
 
 ################################################################################################
@@ -146,32 +149,45 @@ module "vpc" {
 # "load-balancer to instance" to allow ELB to forward traffic from the Internet to the instance
 ################################################################################################
 
-module "wordpress-ingress-sg" {
-  source = "terraform-aws-modules/security-group/aws//modules/http-80"
+# module "wordpress-ingress-sg" {
+#   source = "terraform-aws-modules/security-group/aws//modules/http-80"
 
-  name        = "WORDPRESS-INGRESS"
-  description = "Security group for web-server with HTTP ports open within VPC"
-  #vpc_id      = "vpc-12345678"
+#   name        = "WORDPRESS-INGRESS"
+#   description = "Security group for web-server with HTTP ports open within VPC"
+#   #vpc_id      = "vpc-12345678"
+#   vpc_id      = module.vpc.vpc_id
+
+#   ingress_cidr_blocks = ["50.82.222.12/32"]
+#   #egress_rules = ["http-80-tcp"]
+#   computed_egress_with_source_security_group_id = [
+#     {
+#       rule                     = "http-80-tcp"
+#       source_security_group_id = module.wordpress-instance-sg.security_group_id
+#     },
+#   ]
+# }
+
+module "wordpress-ingress-sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
+  version = "~> 4.0"
+
+  name        = "${local.name}-WORDPRESS-INGRESS"
   vpc_id      = module.vpc.vpc_id
+  description = "Security group for ${local.name}"
 
   ingress_cidr_blocks = ["50.82.222.12/32"]
-  #egress_rules = ["http-80-tcp"]
-  computed_egress_with_source_security_group_id = [
-    {
-      rule                     = "http-80-tcp"
-      source_security_group_id = module.wordpress-instance-sg.security_group_id
-    },
-  ]
+
+  tags = local.tags_as_map
 }
 
 module "wordpress-instance-sg" {
   source = "terraform-aws-modules/security-group/aws//modules/http-80"
 
-  name        = "WORDPRESS-INSTANCE"
+  name        = "${local.name}-WORDPRESS-INSTANCE"
   description = "Security group for web-server with HTTP ports open within VPC"
   #vpc_id      = "vpc-12345678"
   vpc_id      = module.vpc.vpc_id
-
+  ingress_cidr_blocks = ["10.0.0.0/16"]
   computed_ingress_with_source_security_group_id = [
     {
       rule                     = "http-80-tcp"
@@ -186,35 +202,35 @@ module "wordpress-instance-sg" {
 #######################################################################
 # AWS Application and Network Load Balancer (ALB & NLB) Terraform module
 #######################################################################
-module "alb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 6.0"
+# module "alb" {
+#   source  = "terraform-aws-modules/alb/aws"
+#   version = "~> 6.0"
 
-  name = local.name
+#   name = local.name
 
-  vpc_id          = module.vpc.vpc_id
-  subnets         = module.vpc.public_subnets
-  security_groups = [module.wordpress-ingress-sg.security_group_id]
+#   vpc_id          = module.vpc.vpc_id
+#   subnets         = module.vpc.public_subnets
+#   security_groups = [module.wordpress-ingress-sg.security_group_id]
 
-  http_tcp_listeners = [
-    {
-      port               = 80
-      protocol           = "HTTP"
-      target_group_index = 0
-    }
-  ]
+#   http_tcp_listeners = [
+#     {
+#       port               = 80
+#       protocol           = "HTTP"
+#       target_group_index = 0
+#     }
+#   ]
 
-  target_groups = [
-    {
-      name             = local.name
-      backend_protocol = "HTTP"
-      backend_port     = 80
-      target_type      = "instance"
-    },
-  ]
+#   target_groups = [
+#     {
+#       name             = local.name
+#       backend_protocol = "HTTP"
+#       backend_port     = 80
+#       target_type      = "instance"
+#     },
+#   ]
 
-  tags = local.tags_as_map
-}
+#   tags = local.tags_as_map
+# }
 ################################################################################
 # basic ASG with Launch Template
 ################################################################################
@@ -251,6 +267,44 @@ module "asg" {
       security_groups       = [module.wordpress-instance-sg.security_group_id]
     }
   ]
+
+  target_group_arns = module.alb.target_group_arns
   tags        = local.tags
   tags_as_map = local.tags_as_map
+}
+
+
+#######################################################################
+# AWS Application and Network Load Balancer (ALB & NLB) Terraform module
+#######################################################################
+
+
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 6.0"
+
+  name = local.name
+
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.public_subnets
+  security_groups = [module.wordpress-ingress-sg.security_group_id]
+
+  http_tcp_listeners = [
+    {
+      port               = 80
+      protocol           = "HTTP"
+      target_group_index = 0
+    }
+  ]
+
+  target_groups = [
+    {
+      name             = local.name
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+    },
+  ]
+
+  tags = local.tags_as_map
 }
