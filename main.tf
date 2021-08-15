@@ -177,6 +177,14 @@ module "wordpress-ingress-sg" {
 
   ingress_cidr_blocks = ["50.82.222.12/32"]
 
+   
+  computed_egress_with_self = [
+    {
+      rule = "http-80-tcp"
+    },
+  ]
+
+  number_of_computed_egress_with_self = 1
   tags = local.tags_as_map
 }
 
@@ -188,6 +196,12 @@ module "wordpress-instance-sg" {
   #vpc_id      = "vpc-12345678"
   vpc_id      = module.vpc.vpc_id
   ingress_cidr_blocks = ["10.0.0.0/16"]
+  # ingress_rules = ["ssh-tcp"]
+  ingress_with_cidr_blocks = [ {
+    rule = "ssh-tcp"
+    cidr_blocks = "50.82.222.12/32"
+  } ]
+
   computed_ingress_with_source_security_group_id = [
     {
       rule                     = "http-80-tcp"
@@ -195,6 +209,7 @@ module "wordpress-instance-sg" {
     }
   ]
   number_of_computed_ingress_with_source_security_group_id = 1
+
   egress_rules = ["all-all"]
   tags = local.tags_as_map
 }
@@ -244,9 +259,9 @@ module "asg" {
   name = local.name
 
   vpc_zone_identifier = module.vpc.private_subnets
-  min_size            = 1
-  max_size            = 1
-  desired_capacity    = 1
+  min_size               = 2
+  max_size               = 2
+  desired_capacity       = 2
 
   # Launch template
   lt_name                = local.name
@@ -255,16 +270,17 @@ module "asg" {
   use_lt                 = true
   create_lt              = true
 
-  image_id      = data.aws_ami.amazon-linux-2.id
-  instance_type = "t2.micro"
-  user_data = "${base64encode(data.template_file.user_data.rendered)}"
-
+  image_id               = data.aws_ami.amazon-linux-2.id
+  instance_type          = "t2.micro"
+  user_data              = "${base64encode(data.template_file.user_data.rendered)}"
+  key_name               = "24JULYUSW2"
   network_interfaces = [
     {
-      delete_on_termination = true
-      description           = "eth0"
-      device_index          = 0
-      security_groups       = [module.wordpress-instance-sg.security_group_id]
+      associate_public_ip_address = true
+      delete_on_termination       = true
+      description                 = "eth0"
+      device_index                = 0
+      security_groups             = [module.wordpress-instance-sg.security_group_id]
     }
   ]
 

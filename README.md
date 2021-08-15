@@ -18,3 +18,5 @@ This repo is a companion repo to the [Use Modules from the Registry learn tutori
 # amazon linux 2:  https://www.hashicorp.com/blog/hashicorp-terraform-supports-amazon-linux-2
 # aws cli descirbe images: https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html
 # come back to this: https://github.com/brikis98/terraform-up-and-running-code
+
+# Installing WordPress
