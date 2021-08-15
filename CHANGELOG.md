@@ -4,3 +4,5 @@
 #STOPPING POINT: <t:TIMESTAMP>
 15AUG2021
 health checks still failing; take a look at the AWS terraform examples where the ALB has **two SGs** associated
+- https://registry.terraform.io/modules/terraform-aws-modules/alb/aws/latest
+
