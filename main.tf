@@ -273,7 +273,7 @@ module "asg" {
   image_id               = data.aws_ami.amazon-linux-2.id
   instance_type          = "t2.micro"
   user_data              = "${base64encode(data.template_file.user_data.rendered)}"
-  key_name               = "24JULYUSW2"
+  key_name               = "19-aug-quick-start"
   network_interfaces = [
     {
       associate_public_ip_address = true
